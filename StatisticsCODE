@@ -1,0 +1,172 @@
+%%% Statistics Code and compare (Graphs)  %%%
+
+
+clc
+clear all
+
+RMSE_EulerMedio=[
+0.061369
+0.11010
+0.089411
+0.071354
+0.088714
+0.079942
+0.081563
+0.0796
+0.079059
+0.079258];
+
+RMSE_ItoMedio =[
+0.054805
+0.11230
+0.089998
+0.077452
+0.087396
+0.079635
+0.080704
+0.07937
+0.079087
+0.079252];
+
+MAE_EulerMedio =[
+0.011571
+0.01670
+0.015021
+0.01363
+0.013741
+0.013782
+0.013854
+0.013747
+0.01368
+0.013705];
+
+MAE_ItoMedio =[
+0.011054
+0.01701
+0.01592
+0.013972
+0.013802
+0.01374
+0.013796
+0.013739
+0.013682
+0.013704]
+
+R2_EulerMedio =[
+0.9848
+0.94650
+0.9521
+0.9643
+0.9699
+0.9668
+0.9659
+0.9676
+0.9683
+0.9682];
+
+R2_ItoMedio =[
+0.9879
+0.94570
+0.9536
+0.9625
+0.9718
+0.966
+0.9669
+0.9677
+0.9683
+0.9682];
+
+NumVentos=[
+1
+2
+5
+8
+10
+100
+1000
+10000
+100000
+1000000];
+
+
+
+figure;
+hold on
+plot(NumVentos,RMSE_EulerMedio,'dk','LineWidth',2,'markersize', 20)
+plot(NumVentos,RMSE_ItoMedio,'^b','LineWidth',2,'markersize', 20)
+plot(NumVentos,RMSE_EulerMedio,'k','LineWidth',2)
+plot(NumVentos,RMSE_ItoMedio,'b','LineWidth',2)
+
+grid on
+xlabel('Número de ventos criados')
+ylabel('RMSE')
+legend('Euler','Ito')
+set(gca, 'FontName', 'Garamond', 'FontSize', 20);
+
+ax2 = axes('Position',[0.58 0.55 0.30 0.30]); % [esq baixo largura altura]
+
+box on
+
+hold on
+plot(NumVentos,RMSE_EulerMedio,'k','LineWidth',4)
+plot(NumVentos,RMSE_ItoMedio,'b','LineWidth',4)
+set(gca, 'FontName', 'Garamond', 'FontSize', 20);
+xlim([0 11])       % região ampliada
+ylim([0 0.15])      % ajuste conforme seus dados
+grid on
+title('Zoom')
+
+
+
+figure;
+hold on
+plot(NumVentos,R2_EulerMedio,'dk','LineWidth',2,'markersize', 20)
+plot(NumVentos,R2_ItoMedio,'^b','LineWidth',2,'markersize', 20)
+plot(NumVentos,R2_EulerMedio,'k','LineWidth',2)
+plot(NumVentos,R2_ItoMedio,'b','LineWidth',2)
+ylim([0.94 1.02]);
+grid on
+xlabel('Número de ventos criados')
+ylabel('R2')
+legend('Euler','Ito')
+set(gca, 'FontName', 'Garamond', 'FontSize', 20);
+
+ax2 = axes('Position',[0.58 0.55 0.30 0.30]); % [esq baixo largura altura]
+
+box on
+
+hold on
+plot(NumVentos,R2_EulerMedio,'k','LineWidth',4)
+plot(NumVentos,R2_ItoMedio,'b','LineWidth',4)
+set(gca, 'FontName', 'Garamond', 'FontSize', 20);
+xlim([0 11])       % região ampliada
+ylim([0.94 1.02])      % ajuste conforme seus dados
+grid on
+title('Zoom')
+
+
+figure;
+hold on
+plot(NumVentos,MAE_EulerMedio,'dk','LineWidth',2,'markersize', 20)
+plot(NumVentos,MAE_ItoMedio,'^b','LineWidth',2,'markersize', 20)
+plot(NumVentos,MAE_EulerMedio,'k','LineWidth',2)
+plot(NumVentos,MAE_ItoMedio,'b','LineWidth',2)
+
+grid on
+xlabel('Número de ventos criados')
+ylabel('MAE')
+legend('Eules','Ito')
+set(gca, 'FontName', 'Garamond', 'FontSize', 20);
+
+ax2 = axes('Position',[0.58 0.55 0.30 0.30]); % [esq baixo largura altura]
+
+box on
+
+hold on
+plot(NumVentos,MAE_EulerMedio,'k','LineWidth',4)
+plot(NumVentos,MAE_ItoMedio,'b','LineWidth',4)
+set(gca, 'FontName', 'Garamond', 'FontSize', 20);
+xlim([0 11])       % região ampliada
+ylim([0 0.02])      % ajuste conforme seus dados
+grid on
+title('Zoom')
