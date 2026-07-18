@@ -1,0 +1,211 @@
+%%%%   Main CODE  %%%%
+clc; clear; close all;
+
+% --- Parâmetros de Simulação ---
+T_final = 10;           % Tempo total (s)
+fs = 100;               % Frequência de amostragem (Hz)
+dt = 1/fs;              % Passo de tempo (s)
+t = 0:dt:T_final;
+N = length(t);
+
+% Parâmetros do Processo (SDE) para Euler e Itô
+% Modelo de reversão à média (tipo CIR):
+% dx = theta*(x0 - x)*dt + D*sqrt(x)*dW
+theta = 0.5;             % Taxa de reversão à média
+D = 0.2;                 % Intensidade do ruído (difusão)
+x0 = 11;                 % Velocidade média (m/s)
+
+% Parâmetros para o Método de Davenport
+V10 = 11;                % Velocidade média a 10m (m/s)
+Cas = 0.0065;            % Coeficiente de arrasto superficial (Cat. II)
+u_star2 = Cas * V10^2;   % Velocidade de atrito ao quadrado
+m = 100;                 % Número de harmônicos
+
+for i=1:1
+
+
+% --- 1. MÉTODO DO VENTO SINTÉTICO DE DAVENPORT ---
+f_min = 0.01; f_max = 5;
+freqs = logspace(log10(f_min), log10(f_max), m);
+df = diff([freqs(1) freqs]);
+
+x_davenport = zeros(1, N) + V10; % Inicia com a média
+for k = 1:m
+    x_freq = (1200 * freqs(k)) / V10;
+    Sr = (4 * x_freq^2) / (1 + x_freq^2)^(4/3);
+    Sv = (Sr * u_star2) / freqs(k);
+    Ck = sqrt(2 * Sv * df(k));
+    phi_k = 2 * pi * rand();
+    x_davenport = x_davenport + Ck * cos(2 * pi * freqs(k) * t + phi_k);
+end
+
+% --- 2. MÉTODO DE EULER-MARUYAMA (1ª ORDEM) ---
+% dx = theta*(x0 - x)*dt + D*sqrt(x)*dW
+x_euler = zeros(1, N);
+x_euler(1) = x0;
+for n = 1:N-1
+    xn = max(x_euler(n), 0);   % evita sqrt de negativo por ruído numérico
+    dW = sqrt(dt) * randn();
+    x_euler(n+1) = x_euler(n) + theta*(x0 - xn)*dt + D*sqrt(xn)*dW;
+end
+
+% --- 3. MÉTODO DE MILSTEIN (INTEGRAL DE ITÔ, 2ª ORDEM) ---
+% Mesmo SDE, mas com o termo de correção de Itô/Milstein:
+% x_{n+1} = x_n + theta*(x0-x_n)*dt + D*sqrt(x_n)*dW + (1/4)*D^2*(dW^2 - dt)
+x_ito = zeros(1, N);
+x_ito(1) = x0;
+for n = 1:N-1
+    xn = max(x_ito(n), 0);
+    dW = sqrt(dt) * randn();
+    drift = theta*(x0 - xn)*dt;
+    diff_term = D*sqrt(xn)*dW;
+    milstein_corr = 0.25 * D^2 * (dW^2 - dt);
+    x_ito(n+1) = x_ito(n) + drift + diff_term + milstein_corr;
+end
+
+
+
+%% Análise no domínio da frequência
+
+% Vetores de entrada:
+% t
+% x_davenport
+% x_euler
+% x_ito
+
+%% Parâmetros de amostragem
+
+dt = mean(diff(t));      % Passo de tempo
+Fs = 1/dt;               % Frequência de amostragem (Hz)
+N = length(t);           % Número de amostras
+
+%% FFT - Davenport
+Y_davenport = fft(x_davenport);
+
+P2_davenport = abs(Y_davenport/N);
+P1_davenport = P2_davenport(1:floor(N/2)+1);
+P1_davenport(2:end-1) = 2*P1_davenport(2:end-1);
+
+%% FFT - Euler
+Y_euler = fft(x_euler);
+
+P2_euler = abs(Y_euler/N);
+P1_euler = P2_euler(1:floor(N/2)+1);
+P1_euler(2:end-1) = 2*P1_euler(2:end-1);
+
+%% FFT - Ito
+Y_ito = fft(x_ito);
+
+P2_ito = abs(Y_ito/N);
+P1_ito = P2_ito(1:floor(N/2)+1);
+P1_ito(2:end-1) = 2*P1_ito(2:end-1);
+
+%% Vetor de frequências
+f = Fs*(0:floor(N/2))/N;
+
+%%%% Estatística da pesquisa
+RMSE_Euler(i) = sqrt(mean((P1_davenport-P1_euler).^2));
+RMSE_Ito(i)   = sqrt(mean((P1_davenport-P1_ito).^2));
+
+MAE_Euler(i) = mean(abs(P1_davenport-P1_euler));
+MAE_Ito(i)   = mean(abs(P1_davenport-P1_ito));
+
+R2_Euler(i) = 1 - sum((P1_davenport-P1_euler).^2)/...
+               sum((P1_davenport-mean(P1_davenport)).^2);
+
+R2_Ito(i) = 1 - sum((P1_davenport-P1_ito).^2)/...
+             sum((P1_davenport-mean(P1_davenport)).^2);
+
+end
+
+
+
+
+%% Gráfico
+%% Gráfico principal
+
+
+dt=1000; %%Passo de tempo%%
+%% Vento aleatório 11.4m/s (Rotor parado) turbulento%%
+%% Ler o arquivo de entrada %%%
+FID=fopen('CBPE11-4.out');
+datacell = textscan(FID, '%f%f%f%f%f%f%f%f%f%f%f%f%f%f%f%f%f%f', 'HeaderLines', 8, 'CollectOutput', 1);
+fclose(FID);
+A = datacell{1};
+Time=A(:,1);
+Var=A(:,2);
+clear A
+
+
+
+% --- Visualização ---
+figure('Color', 'w');
+plot(t, x_davenport, 'g', 'LineWidth', 1.0); hold on;
+plot(t, x_euler, 'r--', 'LineWidth', 1.2);
+plot(t, x_ito, 'b', 'LineWidth', 1.2);
+plot(Time(1:end/30), Var(1:end/30),'k', 'LineWidth', 1.2)
+legend('Davenport (Frequência/Harmônicos)', 'Euler (SDE 1ª Ordem)', 'Itô/Milstein (SDE 2ª Ordem)', 'TurbSIM');
+xlabel('Tempo (s)'); ylabel('Velocidade do Vento (m/s)');
+title('Comparação de Formulações de Vento Sintético');
+set(gca, 'FontName', 'Garamond', 'FontSize', 20);
+grid on;
+
+figure;
+plot(f,P1_davenport,'k','LineWidth',2); hold on;
+plot(f,P1_euler,'b','LineWidth',1.8);
+plot(f,P1_ito,'r','LineWidth',1.8);
+set(gca, 'FontName', 'Garamond', 'FontSize', 20);
+
+grid on
+xlabel('Frequência (Hz)')
+ylabel('Amplitude')
+legend('Davenport','Euler','Ito','Location','northeast')
+
+%% Janela de zoom (Inset)
+
+ax2 = axes('Position',[0.58 0.55 0.30 0.30]); % [esq baixo largura altura]
+
+box on
+hold on
+plot(f,P1_davenport,'k','LineWidth',2)
+plot(f,P1_euler,'b','LineWidth',1.8)
+plot(f,P1_ito,'r','LineWidth',1.8)
+
+xlim([0 2])       % região ampliada
+ylim([0 2])      % ajuste conforme seus dados
+grid on
+title('Zoom')
+
+
+figure;
+VetorEstatistica=1:length(RMSE_Euler);
+plot(VetorEstatistica, RMSE_Euler, VetorEstatistica,RMSE_Ito)
+RMSE_EulerMedio=mean(RMSE_Euler)
+RMSE_ItoMedio=mean(RMSE_Ito)
+grid on
+xlabel('Número de ventos criados')
+ylabel('RMSE')
+legend('Euler','Ito','Location','northeast')
+
+figure;
+VetorEstatistica=1:length(MAE_Euler);
+plot(VetorEstatistica, MAE_Euler, VetorEstatistica,MAE_Ito)
+MAE_EulerMedio=mean(MAE_Euler)
+MAE_ItoMedio=mean(MAE_Ito)
+grid on
+xlabel('Número de ventos criados')
+ylabel('MAE')
+legend('Euler','Ito','Location','northeast')
+
+
+figure;
+VetorEstatistica=1:length(R2_Euler);
+plot(VetorEstatistica, R2_Euler, VetorEstatistica,R2_Ito)
+R2_EulerMedio=mean(R2_Euler)
+R2_ItoMedio=mean(R2_Ito)
+grid on
+xlabel('Número de ventos criados')
+ylabel('R2')
+legend('Euler','Ito','Location','northeast')
+
+
